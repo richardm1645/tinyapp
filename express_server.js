@@ -32,13 +32,7 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
-app.post("/urls", (req, res) => {
-  
-  let newCode = generateRandomString();
-  urlDatabase[newCode] = req.body.longURL;
-  res.redirect('/urls/' + newCode)
 
-});
 
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
@@ -49,6 +43,11 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
+app.post("/urls/:id", (req, res) => {
+
+  const shortCode = req.url.slice(6)
+  res.redirect('/urls/' + shortCode)
+});
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);

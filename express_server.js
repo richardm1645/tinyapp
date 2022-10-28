@@ -1,8 +1,10 @@
 const express = require("express");
+const morgan = require('morgan')
 const app = express();
 const PORT = 8080; // default port 8080
 
 app.set("view engine", "ejs");
+app.use(morgan('dev'))
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -18,7 +20,6 @@ const generateRandomString = function() {
   return ID;
 }
 
-console.log(generateRandomString())
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -26,9 +27,17 @@ app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
+app.get("/urls", (req, res) => {
+  const templateVars = { urls: urlDatabase };
+  res.render("urls_index", templateVars);
+});
+
 app.post("/urls", (req, res) => {
-  console.log(req.body); // Log the POST request body to the console
-  res.send("Ok"); // Respond with 'Ok' (we will replace this)
+  
+  let newCode = generateRandomString();
+  urlDatabase[newCode] = req.body.longURL;
+  res.redirect('/urls/' + newCode)
+
 });
 
 app.get("/urls/new", (req, res) => {
@@ -40,13 +49,17 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-/*
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-*/
+app.get("/u/:id", (req, res) => {
+  //Gets the id from the url to cross reference with the database
+  const longURL = urlDatabase[req.url.slice(3)];
+  res.redirect(longURL);
+});
+
 
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");

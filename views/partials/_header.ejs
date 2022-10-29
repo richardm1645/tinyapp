@@ -13,7 +13,7 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-      <div class="navbar-nav">
+      <div class="navbar-nav w-100 justify-content-between">
         <form class="form-inline">
           <a class="nav-item nav-link" href="/urls">My URLs</a>
           <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
@@ -21,7 +21,7 @@
 
         <% if (username) { %>
           <form class="form-inline" action="/urls/logout" method="POST">
-            <h6>Logged in as: <%= username %></h6>
+            <p class="mr-1">Logged in as: <%= username %></p>
             <button type="submit" class="btn btn-outline-danger">Logout</button>
           </form>
         <% } else { %>

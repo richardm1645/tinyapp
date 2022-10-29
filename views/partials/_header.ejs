@@ -14,8 +14,30 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
       <div class="navbar-nav">
-        <a class="nav-item nav-link" href="/urls">My URLs</a>
-        <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
+        <form class="form-inline">
+          <a class="nav-item nav-link" href="/urls">My URLs</a>
+          <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
+        </form>
+
+        <% if (username) { %>
+          <form class="form-inline" action="/urls/logout" method="POST">
+            <h6>Logged in as: <%= username %></h6>
+            <button type="submit" class="btn btn-outline-danger">Logout</button>
+          </form>
+        <% } else { %>
+          <form class="form-inline" action="/urls/login" method="POST">
+            <input
+              class="form-control mr-sm-2"
+              type="text"
+              name="username"
+              placeholder="Username"
+              style="width: 200px; margin: 1em"
+            />
+            <button type="submit" class="btn btn-outline-dark">Login</button>
+          </form>
+       <% } %>
+
+        
       </div>
     </div>
   </nav>

@@ -19,22 +19,21 @@
           <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
         </form>
 
-        <% if (username) { %>
+        <% if (user_id) { %>
           <form class="form-inline" action="/urls/logout" method="POST">
-            <p class="mr-1">Logged in as: <%= username %></p>
+            <p class="mr-1">Logged in as: <%= email %></p>
             <button type="submit" class="btn btn-outline-danger">Logout</button>
           </form>
         <% } else { %>
-          <form class="form-inline" action="/urls/login" method="POST">
-            <input
-              class="form-control mr-sm-2"
-              type="text"
-              name="username"
-              placeholder="Username"
-              style="width: 200px; margin: 1em"
-            />
-            <button type="submit" class="btn btn-outline-dark">Login</button>
-          </form>
+          <td><form method="GET" action="/urls/login">
+            <button type="submit" class="btn btn-secondary">Login</button>
+            </form> 
+
+
+            <form method="GET" action="/urls/register">
+            <button type="submit" class="btn btn-primary">Register</button>
+            </form> 
+          </td>
        <% } %>
 
         

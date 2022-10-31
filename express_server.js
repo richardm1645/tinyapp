@@ -1,6 +1,7 @@
 const express = require("express");
 const morgan = require('morgan')
 const cookieParser = require('cookie-parser');
+const e = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -13,7 +14,9 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-const generateRandomString = function() {
+const users = {};
+
+const generateRandomString = function () {
   let ID = '';
   const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   for (let i = 0; i <= 5; i++) {
@@ -22,6 +25,14 @@ const generateRandomString = function() {
   return ID;
 }
 
+const getUserByEmail = function(email) {
+  for (const user in users) {
+    if (users[user].email === email) {
+      return users[user].email;
+    }
+  }
+  return null;
+}
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -30,9 +41,15 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { 
-    username: req.cookies["username"],
-    urls: urlDatabase 
+  console.log(users)
+  const cookieID = req.cookies["user_id"];
+  if (cookieID) {
+    var email = users[cookieID].email; //var for global scope use
+  }
+  const templateVars = {
+    urls: urlDatabase,
+    user_id: cookieID,
+    email: email
   };
   res.render("urls_index", templateVars);
 });
@@ -46,29 +63,73 @@ app.post("/urls", (req, res) => {
 
 //Creates new URL
 app.get("/urls/new", (req, res) => {
-  const templateVars = { username: req.cookies["username"] }
+  const templateVars = { 
+    user_id: req.cookies["user_id"],
+    email: this.user_id ? users[req.cookies["user_id"]].email : null 
+  }
   res.render("urls_new", templateVars);
 });
 
 
-//Creates an account
+//Logs users in
+app.get("/urls/login", (req, res) => {
+  res.render("user_login");
+})
+
+//Checks for login validation
 app.post("/urls/login", (req, res) => {
-  res.cookie("username", req.body.username);
-  res.redirect('/urls/');
-});
+  if (getUserByEmail(req.body.email) !== req.body.email) {
+    res.send("Error 403, the specified email does not exist in the database.")
+  }
+  for (const user in users) {
+    if (users[user].password === req.body.password) {
+      res.cookie("user_id", users[user].id);
+      res.redirect("/urls");
+    }
+  }
+  res.send("Error 403, the password does not match the registered email")
+})
 
 //Logs the user out of the account
 app.post('/urls/logout', (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("user_id");
+  res.redirect('/urls/login');
+})
+
+//Register users
+app.get("/urls/register", (req, res) => {
+  res.render("user_register");
+});
+
+app.post('/urls/register', (req, res) => {
+  if (req.body.email === '' || req.body.password === '') {
+    res.send("Error 400, please enter a valid email and/or password")
+  } 
+  if (getUserByEmail(req.body.email) === req.body.email) {
+    res.send("Error 400, that email already exists in the database")
+  }
+  const userID = generateRandomString();
+  //Creates a user profile for registering
+  users[userID] = {
+    id: userID,
+    email: req.body.email,
+    password: req.body.password
+  };
+  
+  res.cookie("user_id", userID)
   res.redirect('/urls/');
 })
 
+
+
+
 //Creates custom short random codes for new URLs
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { 
-    id: req.params.id, 
+  const templateVars = {
+    id: req.params.id,
     longURL: urlDatabase[req.params.id],
-    username: req.cookies.username
+    user_id: req.cookies["user_id"],
+    email: this.user_id ? users[req.cookies["user_id"]].email : null
   };
   res.render("urls_show", templateVars);
 });

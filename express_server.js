@@ -40,6 +40,16 @@ const getUserByEmail = function(email) {
   return null;
 }
 
+const urlsForUser = function(id) {
+  let userURLs = [];
+  for (const url in urlDatabase) {
+    if (urlDatabase[url].userID === id) {
+      userURLs.push(urlDatabase[url]);
+    }
+  }
+  return userURLs;
+}
+
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
@@ -47,13 +57,19 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  console.log(users)
   const cookieID = req.cookies["user_id"];
+  let userURLs = urlsForUser(cookieID)
+  console.log(userURLs)
   const templateVars = {
-    urls: urlDatabase,
     user_id: cookieID,
-    //Ternary operator to prevent error when trying to read user_id if it's undefined
-    email: this.user_id ? users[req.cookies["user_id"]].email : null
+    email: function() {
+      if (this.user_id) {
+        return users[req.cookies["user_id"]].email;
+      } else {
+        return null;
+      }
+    },
+    urls: userURLs
   };
   if (cookieID) {
     res.render("urls_index", templateVars);
@@ -66,7 +82,11 @@ app.get("/urls", (req, res) => {
 app.post("/urls", (req, res) => {
   if (req.cookies["user_id"]) {
     let newCode = generateRandomString();
-    urlDatabase[newCode] = req.body.longURL;
+    urlDatabase[newCode] = {
+      longURL: req.body.longURL,
+      userID: req.cookies["user_id"],
+      shortID: newCode
+    }
     res.redirect('/urls/' + newCode)
   } else {
     res.redirect('/error_permissions');
@@ -76,7 +96,13 @@ app.post("/urls", (req, res) => {
 app.get('/error_permissions', (req, res) => {
   const templateVars = { 
     user_id: req.cookies["user_id"],
-    email: this.user_id ? users[req.cookies["user_id"]].email : null 
+    email: function() {
+      if (this.user_id) {
+        return users[req.cookies["user_id"]].email;
+      } else {
+        return null;
+      }
+    }
   }
   res.render('error_permissions', templateVars)
 })
@@ -85,8 +111,14 @@ app.get('/error_permissions', (req, res) => {
 app.get("/urls/new", (req, res) => {
   const templateVars = { 
     user_id: req.cookies["user_id"],
-    email: this.user_id ? users[req.cookies["user_id"]].email : null 
-  }
+    email: function() {
+      if (this.user_id) {
+        return users[req.cookies["user_id"]].email;
+      } else {
+        return null;
+      }
+    }
+  } 
   if (!req.cookies["user_id"]) {
     res.redirect('/urls/login')
   } else {
@@ -108,7 +140,7 @@ app.get("/urls/login", (req, res) => {
 //Checks for login validation
 app.post("/urls/login", (req, res) => {
   if (getUserByEmail(req.body.email) !== req.body.email) {
-    res.statusCode(403).send("Cannot find user in database.")
+    res.status(403).send("Cannot find user in database.")
   }
   for (const user in users) {
     if (users[user].password === req.body.password) {
@@ -116,7 +148,7 @@ app.post("/urls/login", (req, res) => {
       res.redirect("/urls");
     }
   }
-  res.statusCode(403).send("The password does not match the registered email.")
+  res.status(403).send("The password does not match the registered email.")
 })
 
 //Logs the user out of the account
@@ -136,10 +168,10 @@ app.get("/urls/register", (req, res) => {
 
 app.post('/urls/register', (req, res) => {
   if (req.body.email === '' || req.body.password === '') {
-    res.statusCode(400).send("Please enter a valid email/password.")
+    res.status(400).send("Please enter a valid email/password.")
   } 
   if (getUserByEmail(req.body.email) === req.body.email) {
-    res.statusCode(400).send("That email is already registered in the database.")
+    res.status(400).send("That email is already registered in the database.")
   }
   const userID = generateRandomString();
   //Creates a user profile for registering
@@ -150,7 +182,7 @@ app.post('/urls/register', (req, res) => {
   };
   
   res.cookie("user_id", userID)
-  res.redirect('/urls/');
+  res.redirect('/urls');
 })
 
 //HTML error page if the short url doesn't exist
@@ -164,23 +196,45 @@ app.get('/error_invalidURL', (req, res) => {
 
 //Deletes a link
 app.post("/urls/:id/delete", (req, res) => {
-  const shortURL = req.url.slice(6, 12)
-  console.log(shortURL)
-  delete urlDatabase[shortURL];
-  console.log(urlDatabase)
-  res.redirect('/urls')
+  if (!urlDatabase[req.params.id]) {
+    res.redirect('/error_invalidURL');
+  } else if (!req.cookies["user_id"]) {
+    res.redirect('/error_permissions');
+  } else if (urlsForUser(req.cookies["user_id"]).length === 0) {
+    res.redirect('/error_urlpermissions');
+  } else {
+    const shortURL = req.url.slice(6, 12);
+    delete urlDatabase[shortURL];
+    res.redirect('/urls');
+  }
+  
 });
 
 
 //Creates custom short random codes for new URLs
 app.get("/urls/:id", (req, res) => {
-  const templateVars = {
-    id: req.params.id,
-    longURL: urlDatabase[req.params.id].longURL,
-    user_id: req.cookies["user_id"],
-    email: this.user_id ? users[req.cookies["user_id"]].email : null
-  };
-  res.render("urls_show", templateVars);
+  if (!urlDatabase[req.params.id]) {
+    res.redirect('/error_invalidURL');
+  } else if (!req.cookies["user_id"]) {
+    res.redirect('/error_permissions');
+  } else if (urlsForUser(req.cookies["user_id"]).length === 0) {
+    res.redirect('/error_urlpermissions');
+  } else {
+    const templateVars = {
+      id: req.params.id,
+      longURL: urlDatabase[req.params.id].longURL,
+      user_id: req.cookies["user_id"],
+      email: function() {
+        if (this.user_id) {
+          return users[req.cookies["user_id"]].email;
+        } else {
+          return null;
+        }
+      }
+    };
+    res.render("urls_show", templateVars);
+  }
+  
 });
 
 app.post("/urls/:id", (req, res) => {
@@ -202,15 +256,22 @@ app.get("/u/:id", (req, res) => {
       res.redirect(longURL);
     }
   }
-  res.redirect('/error_invalidURL')
+  res.redirect('/error_urlpermissions')
 });
 
-/*
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
-
-*/
+app.get('/error_urlpermissions', (req, res) => {
+  const templateVars = { 
+    user_id: req.cookies["user_id"],
+    email: function() {
+      if (this.user_id) {
+        return users[req.cookies["user_id"]].email;
+      } else {
+        return null;
+      }
+    }
+  }
+  res.render('error_urlpermissions', templateVars)
+})
 
 app.listen(PORT, () => {
   console.log(`TinyApp listening on port ${PORT}!`);

@@ -10,8 +10,14 @@ app.use(morgan('dev'))
 app.use(cookieParser())
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
 };
 
 const users = {};
@@ -43,23 +49,37 @@ app.get("/", (req, res) => {
 app.get("/urls", (req, res) => {
   console.log(users)
   const cookieID = req.cookies["user_id"];
-  if (cookieID) {
-    var email = users[cookieID].email; //var for global scope use
-  }
   const templateVars = {
     urls: urlDatabase,
     user_id: cookieID,
-    email: email
+    //Ternary operator to prevent error when trying to read user_id if it's undefined
+    email: this.user_id ? users[req.cookies["user_id"]].email : null
   };
-  res.render("urls_index", templateVars);
+  if (cookieID) {
+    res.render("urls_index", templateVars);
+  } else {
+    res.redirect('/error_permissions')
+  }
+  
 });
 
 app.post("/urls", (req, res) => {
-  let newCode = generateRandomString();
-  urlDatabase[newCode] = req.body.longURL;
-  res.redirect('/urls/' + newCode)
+  if (req.cookies["user_id"]) {
+    let newCode = generateRandomString();
+    urlDatabase[newCode] = req.body.longURL;
+    res.redirect('/urls/' + newCode)
+  } else {
+    res.redirect('/error_permissions');
+  }
 });
 
+app.get('/error_permissions', (req, res) => {
+  const templateVars = { 
+    user_id: req.cookies["user_id"],
+    email: this.user_id ? users[req.cookies["user_id"]].email : null 
+  }
+  res.render('error_permissions', templateVars)
+})
 
 //Creates new URL
 app.get("/urls/new", (req, res) => {
@@ -67,19 +87,28 @@ app.get("/urls/new", (req, res) => {
     user_id: req.cookies["user_id"],
     email: this.user_id ? users[req.cookies["user_id"]].email : null 
   }
-  res.render("urls_new", templateVars);
+  if (!req.cookies["user_id"]) {
+    res.redirect('/urls/login')
+  } else {
+    res.render("urls_new", templateVars);
+  }
+  
 });
 
 
 //Logs users in
 app.get("/urls/login", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect('/urls')
+  } else {
   res.render("user_login");
+  }
 })
 
 //Checks for login validation
 app.post("/urls/login", (req, res) => {
   if (getUserByEmail(req.body.email) !== req.body.email) {
-    res.send("Error 403, the specified email does not exist in the database.")
+    res.statusCode(403).send("Cannot find user in database.")
   }
   for (const user in users) {
     if (users[user].password === req.body.password) {
@@ -87,7 +116,7 @@ app.post("/urls/login", (req, res) => {
       res.redirect("/urls");
     }
   }
-  res.send("Error 403, the password does not match the registered email")
+  res.statusCode(403).send("The password does not match the registered email.")
 })
 
 //Logs the user out of the account
@@ -98,15 +127,19 @@ app.post('/urls/logout', (req, res) => {
 
 //Register users
 app.get("/urls/register", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect('/urls')
+  } else {
   res.render("user_register");
+  }
 });
 
 app.post('/urls/register', (req, res) => {
   if (req.body.email === '' || req.body.password === '') {
-    res.send("Error 400, please enter a valid email and/or password")
+    res.statusCode(400).send("Please enter a valid email/password.")
   } 
   if (getUserByEmail(req.body.email) === req.body.email) {
-    res.send("Error 400, that email already exists in the database")
+    res.statusCode(400).send("That email is already registered in the database.")
   }
   const userID = generateRandomString();
   //Creates a user profile for registering
@@ -120,14 +153,30 @@ app.post('/urls/register', (req, res) => {
   res.redirect('/urls/');
 })
 
+//HTML error page if the short url doesn't exist
+app.get('/error_invalidURL', (req, res) => {
+  const templateVars = { 
+    user_id: req.cookies["user_id"],
+    email: this.user_id ? users[req.cookies["user_id"]].email : null 
+  }
+  res.render('error_invalidURL', templateVars)
+})
 
+//Deletes a link
+app.post("/urls/:id/delete", (req, res) => {
+  const shortURL = req.url.slice(6, 12)
+  console.log(shortURL)
+  delete urlDatabase[shortURL];
+  console.log(urlDatabase)
+  res.redirect('/urls')
+});
 
 
 //Creates custom short random codes for new URLs
 app.get("/urls/:id", (req, res) => {
   const templateVars = {
     id: req.params.id,
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,
     user_id: req.cookies["user_id"],
     email: this.user_id ? users[req.cookies["user_id"]].email : null
   };
@@ -147,8 +196,13 @@ app.get("/urls.json", (req, res) => {
 //Redirects users to the actual site based on the short code
 app.get("/u/:id", (req, res) => {
   //Gets the id from the url to cross reference with the database
-  const longURL = urlDatabase[req.url.slice(3)];
-  res.redirect(longURL);
+  for (const url in urlDatabase) {
+    if (url === req.url.slice(3)) {
+      const longURL = urlDatabase[req.url.slice(3)];
+      res.redirect(longURL);
+    }
+  }
+  res.redirect('/error_invalidURL')
 });
 
 /*
@@ -159,5 +213,5 @@ app.get("/hello", (req, res) => {
 */
 
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
+  console.log(`TinyApp listening on port ${PORT}!`);
 });

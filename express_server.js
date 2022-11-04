@@ -1,7 +1,8 @@
 const express = require("express");
 const morgan = require('morgan')
 const cookieParser = require('cookie-parser');
-const e = require("express");
+//const e = require("express");
+const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -60,6 +61,7 @@ app.get("/urls", (req, res) => {
   const cookieID = req.cookies["user_id"];
   let userURLs = urlsForUser(cookieID)
   console.log(userURLs)
+  console.log(users)
   const templateVars = {
     user_id: cookieID,
     email: function() {
@@ -143,7 +145,7 @@ app.post("/urls/login", (req, res) => {
     res.status(403).send("Cannot find user in database.")
   }
   for (const user in users) {
-    if (users[user].password === req.body.password) {
+    if (bcrypt.compareSync(req.body.password, users[user].hashedPassword)) {
       res.cookie("user_id", users[user].id);
       res.redirect("/urls");
     }
@@ -174,11 +176,12 @@ app.post('/urls/register', (req, res) => {
     res.status(400).send("That email is already registered in the database.")
   }
   const userID = generateRandomString();
+  const password = req.body.password;
   //Creates a user profile for registering
   users[userID] = {
     id: userID,
     email: req.body.email,
-    password: req.body.password
+    hashedPassword: bcrypt.hashSync(password, 10)
   };
   
   res.cookie("user_id", userID)

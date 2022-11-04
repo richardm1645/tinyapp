@@ -1,6 +1,9 @@
 const express = require("express");
 const morgan = require('morgan')
 const cookieSession = require('cookie-session');
+
+const { getUserByEmail } = require('./helpers.js');
+
 const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080; // default port 8080
@@ -37,14 +40,6 @@ const generateRandomString = function () {
   return ID;
 }
 
-const getUserByEmail = function(email) {
-  for (const user in users) {
-    if (users[user].email === email) {
-      return users[user].email;
-    }
-  }
-  return null;
-}
 
 const urlsForUser = function(id) {
   let userURLs = [];
@@ -125,8 +120,6 @@ app.get("/urls/new", (req, res) => {
     email: function() {
       if (this.user_id) {
         return users[req.session.user_id].email;
-      } else {
-        return null;
       }
     }
   } 
@@ -150,7 +143,7 @@ app.get("/urls/login", (req, res) => {
 
 //Checks for login validation
 app.post("/urls/login", (req, res) => {
-  if (getUserByEmail(req.body.email) !== req.body.email) {
+  if (!getUserByEmail(req.body.email, users)) {
     res.status(403).send("Cannot find user in database.")
   }
   for (const user in users) {
@@ -181,7 +174,7 @@ app.post('/urls/register', (req, res) => {
   if (req.body.email === '' || req.body.password === '') {
     res.status(400).send("Please enter a valid email/password.")
   } 
-  if (getUserByEmail(req.body.email) === req.body.email) {
+  if (getUserByEmail(req.body.email, users)) {
     res.status(400).send("That email is already registered in the database.")
   }
   const userID = generateRandomString();

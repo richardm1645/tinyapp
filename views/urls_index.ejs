@@ -38,7 +38,7 @@
               <td><%= id.shortID %></td>
               <td><%= id.longURL %></td>
 
-              <td><form method="POST" action="/urls/<%= id.shortID %>">
+              <td><form method="GET" action="/urls/<%= id.shortID %>">
                 <button type="submit" class="btn btn-outline-primary" href="/urls/<%= id.shortID %>">Edit</button>
                 </form> 
               </td>

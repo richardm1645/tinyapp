@@ -106,8 +106,6 @@ app.post('/logout', (req, res) => {
 
 //Renders the main page that shows the user's URLs. 
 app.get("/urls", (req, res) => {
-  console.log("Users: ", users)
-  console.log("URLs: ", urlDatabase)
   const templateVars = {
     user_id: req.session.user_id,
     email: checkEmail(req.session.user_id), //Displays which account is logged in
@@ -158,11 +156,6 @@ app.get("/urls/new", (req, res) => {
 
 //Creates custom short random codes for new URLs
 app.get("/urls/:id", (req, res) => {
-  console.log("userID of first entry: ", urlsForUser(req.session.user_id)[0].userID,
-  " should not equal to user_id: ", req.session.user_id)
-  console.log("available sites: ", urlsForUser(req.session.user_id))
-  console.log(req.session.user_id, "is currently logged in")
-
   const basicTemplateVars = {
     user_id: req.session.user_id,
     email: checkEmail(req.session.user_id)

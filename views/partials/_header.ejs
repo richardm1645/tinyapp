@@ -20,17 +20,17 @@
         </form>
 
         <% if (user_id) { %>
-          <form class="form-inline" action="/urls/logout" method="POST">
-            <p class="mr-1">Logged in as: <%= email() %></p>
+          <form class="form-inline" action="/logout" method="POST">
+            <p class="mr-1">Logged in as: <%= email %></p>
             <button type="submit" class="btn btn-outline-danger">Logout</button>
           </form>
         <% } else { %>
-          <td><form method="GET" action="/urls/login">
+          <td><form method="GET" action="/login">
             <button type="submit" class="btn btn-secondary">Login</button>
             </form> 
 
 
-            <form method="GET" action="/urls/register">
+            <form method="GET" action="/register">
             <button type="submit" class="btn btn-primary">Register</button>
             </form> 
           </td>
